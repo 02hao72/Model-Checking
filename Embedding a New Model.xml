@@ -1,0 +1,610 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+clock global_clock;
+
+bool SM_done:=false;
+bool DPM_done:=false;
+bool PPM_done:=false;
+bool ECM_done:=false;
+bool OAM_done:=false;
+bool BDM_done:=false;
+chan startDataProcessing;
+chan startPathPlanning;
+chan startObstacleAvoidance;
+chan startBehaviorDecision;
+
+chan receive_planning_feedback;
+chan notify_obstacle;</declaration>
+	<template>
+		<name>TimeCheck</name>
+		<declaration>bool errorOccurred;
+bool finished;
+
+
+</declaration>
+		<location id="id0" x="-51" y="-154">
+			<name x="-66" y="-190">Idle</name>
+			<label kind="exponentialrate" x="-108" y="-136">finished:=false</label>
+		</location>
+		<location id="id1" x="-58" y="77">
+			<name x="-68" y="43">Checking</name>
+		</location>
+		<init ref="id0"/>
+		<transition id="id2">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-281" y="-67">global_clock&lt;1000</label>
+			<label kind="assignment" x="-291" y="-49">errorOccurred:=false,
+finished:=true</label>
+			<nail x="-192" y="76"/>
+			<nail x="-193" y="-154"/>
+		</transition>
+		<transition id="id3">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="89" y="-78">SM_done
+&amp;&amp;DPM_done
+&amp;&amp;PPM_done
+&amp;&amp;ECM_done
+&amp;&amp;OAM_done
+&amp;&amp;!finished</label>
+			<nail x="85" y="-154"/>
+			<nail x="86" y="79"/>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">SensorModule</name>
+		<declaration>// Place local declarations here.
+clock TSMT_SM;
+clock TOTALTIME_SM;
+
+bool errorOccurred_SM;
+
+int Senddata;
+
+
+</declaration>
+		<location id="id4" x="-1218" y="-180">
+			<name x="-1236" y="-216">Idle</name>
+			<label kind="exponentialrate" x="-1274" y="-167">Senddata:=0</label>
+		</location>
+		<location id="id5" x="-932" y="48">
+			<name x="-961" y="8">Receiving</name>
+		</location>
+		<location id="id6" x="-930" y="-400">
+			<name x="-969" y="-439">Collecting</name>
+		</location>
+		<location id="id7" x="-1217" y="-397">
+			<name x="-1264" y="-438">Transmitting</name>
+		</location>
+		<location id="id8" x="-930" y="-275">
+			<name x="-958" y="-309">Parparing</name>
+		</location>
+		<location id="id9" x="-932" y="-99">
+			<name x="-978" y="-142">ReadyReceiving</name>
+		</location>
+		<location id="id10" x="-1218" y="47">
+			<name x="-1228" y="13">Finish</name>
+		</location>
+		<init ref="id4"/>
+		<transition id="id11">
+			<source ref="id6"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-864" y="-416">TSMT_SM &gt;=1</label>
+			<label kind="assignment" x="-870" y="-402">errorOccurred_SM := false</label>
+			<nail x="-818" y="-338"/>
+			<nail x="-818" y="-458"/>
+		</transition>
+		<transition id="id12">
+			<source ref="id10"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-1214" y="-102">TOTALTIME_SM&lt;800</label>
+			<label kind="assignment" x="-1216" y="-79">TSMT_SM := 0,
+TOTALTIME_SM:=0,
+SM_done:=true</label>
+		</transition>
+		<transition id="id13">
+			<source ref="id5"/>
+			<target ref="id10"/>
+			<label kind="guard" x="-1137" y="21">TSMT_SM &gt;=1</label>
+			<label kind="synchronisation" x="-1163" y="63">startDataProcessing!</label>
+			<label kind="assignment" x="-1124" y="47">TSMT_SM:=0</label>
+		</transition>
+		<transition id="id14">
+			<source ref="id9"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="-933" y="-31">TSMT_SM := 0</label>
+		</transition>
+		<transition id="id15">
+			<source ref="id4"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-1139" y="-172">Senddata==1</label>
+			<label kind="assignment" x="-1139" y="-149">TSMT_SM := 0,
+Senddata+=1</label>
+		</transition>
+		<transition id="id16">
+			<source ref="id7"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-1225" y="-348">TSMT_SM &gt; 3</label>
+			<label kind="assignment" x="-1225" y="-327">TSMT_SM := 0,
+Senddata:=1</label>
+		</transition>
+		<transition id="id17">
+			<source ref="id6"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-1147" y="-437">TSMT_SM &gt;=3 
+&amp;&amp; !errorOccurred_SM</label>
+			<label kind="assignment" x="-1136" y="-396">TSMT_SM := 0</label>
+		</transition>
+		<transition id="id18">
+			<source ref="id8"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-1022" y="-357">TSMT_SM &gt;=5</label>
+			<label kind="assignment" x="-1027" y="-336">TSMT_SM := 0</label>
+		</transition>
+		<transition id="id19">
+			<source ref="id4"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-1109" y="-225">Senddata==0</label>
+			<label kind="assignment" x="-1152" y="-268">TSMT_SM := 0,
+TOTALTIME_SM:=0</label>
+		</transition>
+	</template>
+	<template>
+		<name>DataProcessingModule</name>
+		<declaration>clock TDPMT_DPM;
+clock TOTALTIME_DPM;
+
+bool errorOccurred_DPM;
+bool dataReady;
+bool dataValid;
+bool stop;
+
+int send_results;
+
+
+
+</declaration>
+		<location id="id20" x="-191" y="-206">
+			<name x="-201" y="-240">Idle</name>
+			<label kind="exponentialrate" x="-229" y="-262">stop:=true</label>
+		</location>
+		<location id="id21" x="399" y="-207">
+			<name x="359" y="-244">Processing</name>
+		</location>
+		<location id="id22" x="107" y="-206">
+			<name x="74" y="-241">Validating</name>
+		</location>
+		<location id="id23" x="403" y="19">
+			<name x="330" y="-16">TransmittingResults</name>
+		</location>
+		<location id="id24" x="105" y="19">
+			<name x="35" y="-21">WaitingForFeedback</name>
+		</location>
+		<location id="id25" x="-191" y="22">
+			<name x="-201" y="-12">Finish</name>
+		</location>
+		<location id="id26" x="-190" y="-103">
+			<name x="-228" y="-129">SendingFinish</name>
+		</location>
+		<init ref="id20"/>
+		<transition id="id27">
+			<source ref="id26"/>
+			<target ref="id20"/>
+			<label kind="guard" x="-343" y="-188">TOTALTIME_DPM&lt;1000</label>
+			<label kind="assignment" x="-318" y="-167">stop:=false,
+DPM_done:=true</label>
+		</transition>
+		<transition id="id28">
+			<source ref="id21"/>
+			<target ref="id21"/>
+			<label kind="guard" x="344" y="-300">TDPMT_DPM&gt;=2</label>
+			<label kind="assignment" x="288" y="-328">errorOccurred_DPM := false</label>
+			<nail x="307" y="-304"/>
+			<nail x="511" y="-304"/>
+		</transition>
+		<transition id="id29">
+			<source ref="id25"/>
+			<target ref="id26"/>
+			<label kind="guard" x="-190" y="-74">TDPMT_DPM&gt;1</label>
+			<label kind="synchronisation" x="-350" y="-62">startPathPlanning!</label>
+			<label kind="assignment" x="-176" y="-50">TDPMT_DPM := 0</label>
+		</transition>
+		<transition id="id30">
+			<source ref="id24"/>
+			<target ref="id25"/>
+			<label kind="guard" x="-117" y="-1">send_results==1</label>
+		</transition>
+		<transition id="id31">
+			<source ref="id23"/>
+			<target ref="id24"/>
+			<label kind="guard" x="190" y="-5">TDPMT_DPM &gt;=2</label>
+			<label kind="assignment" x="174" y="23">send_results:=1</label>
+		</transition>
+		<transition id="id32">
+			<source ref="id21"/>
+			<target ref="id23"/>
+			<label kind="guard" x="401" y="-128">TDPMT_DPM &gt;=2
+&amp;&amp; dataValid
+&amp;&amp; !errorOccurred_DPM</label>
+			<label kind="assignment" x="276" y="-120">TDPMT_DPM := 0</label>
+		</transition>
+		<transition id="id33">
+			<source ref="id22"/>
+			<target ref="id21"/>
+			<label kind="guard" x="190" y="-229">TDPMT_DPM &gt;=5</label>
+			<label kind="assignment" x="178" y="-203">TDPMT_DPM := 0,
+dataValid :=true</label>
+		</transition>
+		<transition id="id34">
+			<source ref="id20"/>
+			<target ref="id22"/>
+			<label kind="synchronisation" x="-137" y="-232">startDataProcessing?</label>
+			<label kind="assignment" x="-168" y="-206">TDPMT_DPM := 0,
+TOTALTIME_DPM:=0,
+errorOccurred_DPM := false</label>
+		</transition>
+	</template>
+	<template>
+		<name>PathPlanningModule</name>
+		<declaration>clock TPPMT_PPM;
+clock TOTALTIME_PPM;
+
+bool errorOccurred_PPM;
+bool pathValid;
+
+</declaration>
+		<location id="id35" x="112" y="-199">
+			<name x="79" y="-232">Planning</name>
+		</location>
+		<location id="id36" x="-479" y="24">
+			<name x="-489" y="-10">Finish</name>
+		</location>
+		<location id="id37" x="-478" y="-198">
+			<name x="-488" y="-232">Idle</name>
+		</location>
+		<location id="id38" x="-182" y="27">
+			<name x="-252" y="-13">WaitingForFeedback</name>
+		</location>
+		<location id="id39" x="116" y="27">
+			<name x="43" y="-8">TransmittingResults</name>
+		</location>
+		<location id="id40" x="-180" y="-198">
+			<name x="-213" y="-233">Validating</name>
+		</location>
+		<init ref="id37"/>
+		<transition id="id41">
+			<source ref="id35"/>
+			<target ref="id35"/>
+			<label kind="guard" x="57" y="-292">TPPMT_PPM&gt;=5</label>
+			<label kind="assignment" x="1" y="-320">errorOccurred_PPM := false</label>
+			<nail x="20" y="-296"/>
+			<nail x="224" y="-296"/>
+		</transition>
+		<transition id="id42">
+			<source ref="id36"/>
+			<target ref="id37"/>
+			<label kind="guard" x="-479" y="-105">TOTALTIME_PPM&lt;500</label>
+			<label kind="synchronisation" x="-476" y="-127">startBehaviorDecision!</label>
+			<label kind="assignment" x="-478" y="-87">TPPMT_PPM := 0,
+PPM_done:=true</label>
+		</transition>
+		<transition id="id43">
+			<source ref="id38"/>
+			<target ref="id36"/>
+			<label kind="synchronisation" x="-436" y="5">receive_planning_feedback!</label>
+		</transition>
+		<transition id="id44">
+			<source ref="id39"/>
+			<target ref="id38"/>
+			<label kind="guard" x="-98" y="3">TPPMT_PPM &gt;=6</label>
+		</transition>
+		<transition id="id45">
+			<source ref="id35"/>
+			<target ref="id39"/>
+			<label kind="guard" x="114" y="-120">TPPMT_PPM &gt;=5
+&amp;&amp; pathValid
+&amp;&amp; !errorOccurred_PPM</label>
+			<label kind="assignment" x="-11" y="-112">TPPMT_PPM := 0</label>
+		</transition>
+		<transition id="id46">
+			<source ref="id40"/>
+			<target ref="id35"/>
+			<label kind="guard" x="-97" y="-221">TPPMT_PPM &gt;=5</label>
+			<label kind="assignment" x="-109" y="-195">TPPMT_PPM := 0,
+pathValid :=true</label>
+		</transition>
+		<transition id="id47">
+			<source ref="id37"/>
+			<target ref="id40"/>
+			<label kind="synchronisation" x="-424" y="-224">startPathPlanning?</label>
+			<label kind="assignment" x="-455" y="-198">TPPMT_PPM := 0,
+TOTALTIME_PPM:=0,
+errorOccurred_PPM := false</label>
+		</transition>
+	</template>
+	<template>
+		<name>BehaviorDecisionModule</name>
+		<declaration>clock TBDM;
+clock TOTALTIME_BDM;
+clock TA;
+clock TB;
+
+bool dataReceived;
+bool commandSentA;
+bool commandSentB;
+bool chooseOptionA:=true;
+bool chooseOptionB:=true;</declaration>
+		<location id="id48" x="-424" y="-210">
+			<name x="-452" y="-242">DecMaking</name>
+			<urgent/>
+		</location>
+		<location id="id49" x="-290" y="-301">
+			<name x="-314" y="-333">ExeOp_A</name>
+		</location>
+		<location id="id50" x="-292" y="-123">
+			<name x="-309" y="-157">ExeOp_B</name>
+		</location>
+		<location id="id51" x="-158" y="-302">
+			<name x="-196" y="-333">A_Feedback</name>
+			<label kind="invariant" x="-168" y="-285">TA&gt;2</label>
+		</location>
+		<location id="id52" x="-154" y="-121">
+			<name x="-190" y="-153">B_Feedback</name>
+			<label kind="invariant" x="-164" y="-104">TB&gt;10</label>
+		</location>
+		<location id="id53" x="-835" y="-212">
+			<name x="-861" y="-239">Judgment</name>
+		</location>
+		<location id="id54" x="-652" y="-210">
+			<name x="-682" y="-245">Idle</name>
+		</location>
+		<init ref="id54"/>
+		<transition id="id55">
+			<source ref="id54"/>
+			<target ref="id48"/>
+			<label kind="synchronisation" x="-634" y="-231">startBehaviorDecision?</label>
+			<label kind="assignment" x="-629" y="-209">TBDM := 0,
+TOTALTIME_BDM:=0</label>
+		</transition>
+		<transition id="id56">
+			<source ref="id53"/>
+			<target ref="id54"/>
+			<label kind="guard" x="-817" y="-201">TOTALTIME_BDM&lt;500
+&amp;&amp;(commandSentA
+||commandSentB)</label>
+			<label kind="assignment" x="-790" y="-230">OAM_done:=true</label>
+		</transition>
+		<transition id="id57">
+			<source ref="id52"/>
+			<target ref="id53"/>
+			<label kind="guard" x="-495" y="-42">TB&lt;5</label>
+			<label kind="assignment" x="-559" y="-19">commandSentB := true</label>
+			<nail x="-155" y="-20"/>
+			<nail x="-838" y="-25"/>
+		</transition>
+		<transition id="id58">
+			<source ref="id51"/>
+			<target ref="id53"/>
+			<label kind="guard" x="-492" y="-447">TA&lt;5</label>
+			<label kind="assignment" x="-561" y="-420">commandSentA := true</label>
+			<nail x="-158" y="-421"/>
+			<nail x="-832" y="-426"/>
+		</transition>
+		<transition id="id59">
+			<source ref="id50"/>
+			<target ref="id52"/>
+			<label kind="assignment" x="-243" y="-121">TB:=0</label>
+		</transition>
+		<transition id="id60">
+			<source ref="id48"/>
+			<target ref="id50"/>
+			<label kind="guard" x="-412" y="-180">!chooseOptionA</label>
+		</transition>
+		<transition id="id61">
+			<source ref="id49"/>
+			<target ref="id51"/>
+			<label kind="assignment" x="-245" y="-296">TA:=0</label>
+		</transition>
+		<transition id="id62">
+			<source ref="id48"/>
+			<target ref="id49"/>
+			<label kind="guard" x="-413" y="-269">chooseOptionA</label>
+		</transition>
+	</template>
+	<template>
+		<name>ExecutionControlModule</name>
+		<declaration>clock TECMT_ECM;
+clock TOTALTIME_ECM;
+
+bool errorOccurred_ECM;
+bool taskValid;
+
+int start;</declaration>
+		<location id="id63" x="-295" y="-28">
+			<name x="-314" y="-18">Idle</name>
+			<label kind="exponentialrate" x="-379" y="-44">start:=0</label>
+		</location>
+		<location id="id64" x="121" y="-307">
+			<name x="89" y="-339">Sending</name>
+		</location>
+		<location id="id65" x="-102" y="-97">
+			<name x="-134" y="-135">Wait_arb</name>
+		</location>
+		<location id="id66" x="121" y="-98">
+			<name x="110" y="-131">Arb</name>
+		</location>
+		<location id="id67" x="-296" y="-305">
+			<name x="-349" y="-344">finishsending</name>
+		</location>
+		<location id="id68" x="122" y="36">
+			<name x="88" y="1">Receiving</name>
+		</location>
+		<init ref="id63"/>
+		<transition id="id69">
+			<source ref="id63"/>
+			<target ref="id68"/>
+			<label kind="synchronisation" x="-212" y="56">receive_planning_feedback?</label>
+			<nail x="-294" y="78"/>
+			<nail x="122" y="81"/>
+		</transition>
+		<transition id="id70">
+			<source ref="id68"/>
+			<target ref="id63"/>
+			<label kind="guard" x="-105" y="-4">TOTALTIME_ECM&lt;=500</label>
+			<label kind="synchronisation" x="-111" y="15">startObstacleAvoidance!</label>
+			<label kind="assignment" x="-83" y="35">ECM_done:=true</label>
+			<nail x="-101" y="34"/>
+		</transition>
+		<transition id="id71">
+			<source ref="id67"/>
+			<target ref="id63"/>
+			<label kind="guard" x="-291" y="-205">TECMT_ECM&gt;=3</label>
+			<label kind="assignment" x="-363" y="-158">start+=1</label>
+		</transition>
+		<transition id="id72">
+			<source ref="id64"/>
+			<target ref="id67"/>
+			<label kind="guard" x="-137" y="-332">TECMT_ECM&gt;=3</label>
+			<label kind="assignment" x="-144" y="-305">TECMT_ECM := 0</label>
+		</transition>
+		<transition id="id73">
+			<source ref="id64"/>
+			<target ref="id64"/>
+			<label kind="guard" x="110" y="-409">true</label>
+			<label kind="assignment" x="62" y="-441">TECMT_ECM := 0</label>
+			<nail x="193" y="-414"/>
+			<nail x="55" y="-414"/>
+		</transition>
+		<transition id="id74">
+			<source ref="id66"/>
+			<target ref="id64"/>
+			<label kind="guard" x="122" y="-224">!errorOccurred_ECM</label>
+			<label kind="assignment" x="121" y="-202">TECMT_ECM := 0</label>
+		</transition>
+		<transition id="id75">
+			<source ref="id65"/>
+			<target ref="id66"/>
+			<label kind="guard" x="-52" y="-120">TECMT_ECM &gt;=2</label>
+			<label kind="assignment" x="-84" y="-97">errorOccurred_ECM :=false,
+TECMT_ECM := 0</label>
+		</transition>
+		<transition id="id76">
+			<source ref="id63"/>
+			<target ref="id65"/>
+			<label kind="guard" x="-232" y="-102">start==0</label>
+			<label kind="assignment" x="-258" y="-77">TECMT_ECM := 0,
+TOTALTIME_ECM:=0,
+errorOccurred_ECM := false</label>
+		</transition>
+	</template>
+	<template>
+		<name>ObstacleAvoidanceModule</name>
+		<declaration>clock TOAMT_OAM;
+clock TOTALTIME_OAM;
+
+bool errorOccurred_OAM;
+bool obstacleDetected;
+
+chan notify_obstacle;
+chan obstacle_avoided;
+
+int start;</declaration>
+		<location id="id77" x="-412" y="47">
+			<name x="-422" y="13">Idle</name>
+			<label kind="exponentialrate" x="-444" y="61">start:=0</label>
+		</location>
+		<location id="id78" x="92" y="-181">
+			<name x="82" y="-215">Avoiding</name>
+		</location>
+		<location id="id79" x="88" y="50">
+			<name x="78" y="16">Detecting</name>
+		</location>
+		<location id="id80" x="-144" y="-181">
+			<name x="-154" y="-215">Recovery</name>
+		</location>
+		<location id="id81" x="-408" y="-183">
+			<name x="-418" y="-217">Finish</name>
+		</location>
+		<init ref="id77"/>
+		<transition id="id82">
+			<source ref="id81"/>
+			<target ref="id77"/>
+			<label kind="guard" x="-409" y="-102">TOTALTIME_OAM&lt;=300</label>
+			<label kind="assignment" x="-410" y="-68">TOAMT_OAM := 0,
+start+=1,
+OAM_done:=true</label>
+		</transition>
+		<transition id="id83">
+			<source ref="id80"/>
+			<target ref="id81"/>
+			<label kind="guard" x="-338" y="-163">TOAMT_OAM &gt;=3</label>
+			<label kind="synchronisation" x="-383" y="-181">startObstacleAvoidance?</label>
+			<label kind="assignment" x="-391" y="-205">errorOccurred_OAM := false</label>
+		</transition>
+		<transition id="id84">
+			<source ref="id78"/>
+			<target ref="id80"/>
+			<label kind="guard" x="-109" y="-203">TOAMT_OAM &gt;=5
+&amp;&amp; !errorOccurred_OAM</label>
+			<label kind="assignment" x="-93" y="-166">TOAMT_OAM := 0</label>
+		</transition>
+		<transition id="id85">
+			<source ref="id78"/>
+			<target ref="id78"/>
+			<label kind="guard" x="40" y="-267">TOAMT_OAM &lt;=10</label>
+			<label kind="assignment" x="11" y="-298">errorOccurred_OAM:=false</label>
+			<nail x="174" y="-266"/>
+			<nail x="25" y="-271"/>
+		</transition>
+		<transition id="id86">
+			<source ref="id79"/>
+			<target ref="id78"/>
+			<label kind="guard" x="90" y="-99">obstacleDetected</label>
+			<label kind="assignment" x="95" y="-77">TOAMT_OAM := 0</label>
+		</transition>
+		<transition id="id87">
+			<source ref="id79"/>
+			<target ref="id79"/>
+			<label kind="guard" x="33" y="129">TOAMT_OAM &gt;=3</label>
+			<label kind="assignment" x="-2" y="162">obstacleDetected:=true</label>
+			<nail x="26" y="150"/>
+			<nail x="142" y="152"/>
+		</transition>
+		<transition id="id88">
+			<source ref="id77"/>
+			<target ref="id79"/>
+			<label kind="guard" x="-203" y="27">start==0</label>
+			<label kind="assignment" x="-260" y="58">TOAMT_OAM := 0,
+TOTALTIME_OAM:=0,
+obstacleDetected := false</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+sm=SensorModule();
+dpm=DataProcessingModule();
+ppm=PathPlanningModule();
+ecm=ExecutionControlModule();
+oam=ObstacleAvoidanceModule();
+bdm=BehaviorDecisionModule();
+tc=TimeCheck();
+// List one or more processes to be composed into a system.
+system sm,dpm,ppm,ecm,bdm,oam,tc;
+</system>
+	<queries>
+		<option key="--backwards-order" value="1"/>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+		<query>
+			<formula>A&lt;&gt; (bdm.TOTALTIME_BDM &lt; 1)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-11-05 17:44:36 +0800">
+				<option key="--backwards-order" value="1"/>
+			</result>
+		</query>
+	</queries>
+</nta>
