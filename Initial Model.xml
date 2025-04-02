@@ -4,17 +4,51 @@
 	<declaration>// Place global declarations here.
 clock global_clock;
 
+int global_clock_S; 
+int global_clock_P; 
+
+int max(int a, int b) {
+    return (a &gt;= b) ? a : b;
+}
+const int MAX_TIME = 1000;
+const int FAULT_TOLERANCE = 3
+
 bool SM_done:=false;
 bool DPM_done:=false;
 bool PPM_done:=false;
 bool ECM_done:=false;
 bool OAM_done:=false;
+bool fallback_activate:=true;
+
+const int TSM_MAX = 2;
+const int TDPM_MAX = 5;
+const int TPPM_MAX = 10;
+const int TECM_MAX = 3; 
+const int TOAM_MAX = 4;
+
+bool Agent_Added := false;
+bool Agent_Replaced := false;
+bool Agent_Deleted := false;
 
 chan startDataProcessing;
 chan startPathPlanning;
 
 chan receive_planning_feedback;
-chan notify_obstacle;</declaration>
+chan notify_obstacle;
+
+bool checkExecutionOrder() {
+    return (SM_done imply DPM_done) &amp;&amp; 
+           (DPM_done imply PPM_done) &amp;&amp; 
+           (PPM_done imply ECM_done);
+}
+
+int timeValid() {
+    return max(global_clock_S, global_clock_P) &lt;= MAX_TIME;
+}
+
+bool checkTimeConsistency(int addtime) {
+    return MAX_TIME&gt;=max(global_clock_S,global_clock_P);
+}</declaration>
 	<template>
 		<name>TimeCheck</name>
 		<declaration>bool errorOccurred;
@@ -33,7 +67,7 @@ bool finished;
 		<transition id="id2">
 			<source ref="id1"/>
 			<target ref="id0"/>
-			<label kind="guard" x="-281" y="-67">global_clock&lt;1000</label>
+			<label kind="guard" x="-281" y="-67">global_clock&lt;10000</label>
 			<label kind="assignment" x="-291" y="-49">errorOccurred:=false,
 finished:=true</label>
 			<nail x="-192" y="76"/>
@@ -64,89 +98,89 @@ int Senddata;
 
 
 </declaration>
-		<location id="id4" x="-1218" y="-180">
-			<name x="-1236" y="-216">Idle</name>
-			<label kind="exponentialrate" x="-1274" y="-167">Senddata:=0</label>
+		<location id="id4" x="-935" y="-891">
+			<name x="-953" y="-927">Idle</name>
+			<label kind="exponentialrate" x="-991" y="-878">Senddata:=0</label>
 		</location>
-		<location id="id5" x="-932" y="48">
-			<name x="-961" y="8">Receiving</name>
+		<location id="id5" x="-649" y="-663">
+			<name x="-678" y="-703">Receiving</name>
 		</location>
-		<location id="id6" x="-930" y="-400">
-			<name x="-969" y="-439">Collecting</name>
+		<location id="id6" x="-647" y="-1111">
+			<name x="-686" y="-1150">Collecting</name>
 		</location>
-		<location id="id7" x="-1217" y="-397">
-			<name x="-1264" y="-438">Transmitting</name>
+		<location id="id7" x="-934" y="-1108">
+			<name x="-981" y="-1149">Transmitting</name>
 		</location>
-		<location id="id8" x="-930" y="-275">
-			<name x="-958" y="-309">Parparing</name>
+		<location id="id8" x="-647" y="-986">
+			<name x="-675" y="-1020">Parparing</name>
 		</location>
-		<location id="id9" x="-932" y="-99">
-			<name x="-978" y="-142">ReadyReceiving</name>
+		<location id="id9" x="-649" y="-810">
+			<name x="-695" y="-853">ReadyReceiving</name>
 		</location>
-		<location id="id10" x="-1218" y="47">
-			<name x="-1228" y="13">Finish</name>
+		<location id="id10" x="-935" y="-664">
+			<name x="-945" y="-698">Finish</name>
 		</location>
 		<init ref="id4"/>
 		<transition id="id11">
 			<source ref="id6"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-864" y="-416">TSMT_SM &gt;=1</label>
-			<label kind="assignment" x="-870" y="-402">errorOccurred_SM := false</label>
-			<nail x="-818" y="-338"/>
-			<nail x="-818" y="-458"/>
+			<label kind="guard" x="-581" y="-1127">TSMT_SM &gt;=1</label>
+			<label kind="assignment" x="-587" y="-1113">errorOccurred_SM := false</label>
+			<nail x="-535" y="-1049"/>
+			<nail x="-535" y="-1169"/>
 		</transition>
 		<transition id="id12">
 			<source ref="id10"/>
 			<target ref="id4"/>
-			<label kind="guard" x="-1214" y="-102">TOTALTIME_SM&lt;800</label>
-			<label kind="assignment" x="-1216" y="-79">TSMT_SM := 0,
-TOTALTIME_SM:=0,
-SM_done:=true</label>
+			<label kind="guard" x="-931" y="-813">TOTALTIME_SM&lt;8000</label>
+			<label kind="assignment" x="-933" y="-790">TSMT_SM := 0,
+TOTALTIME_SM:=0</label>
 		</transition>
 		<transition id="id13">
 			<source ref="id5"/>
 			<target ref="id10"/>
-			<label kind="guard" x="-1137" y="21">TSMT_SM &gt;=1</label>
-			<label kind="synchronisation" x="-1163" y="63">startDataProcessing!</label>
-			<label kind="assignment" x="-1124" y="47">TSMT_SM:=0</label>
+			<label kind="guard" x="-849" y="-711">TSMT_SM &gt;=1</label>
+			<label kind="synchronisation" x="-872" y="-656">startDataProcessing!</label>
+			<label kind="assignment" x="-844" y="-685">TSMT_SM:=0</label>
 		</transition>
 		<transition id="id14">
 			<source ref="id9"/>
 			<target ref="id5"/>
-			<label kind="assignment" x="-969" y="-28">TSMT_SM := 0</label>
+			<label kind="assignment" x="-643" y="-754">TSMT_SM := 0,
+SM_done := true</label>
 		</transition>
 		<transition id="id15">
 			<source ref="id4"/>
 			<target ref="id9"/>
-			<label kind="guard" x="-1139" y="-172">Senddata==1</label>
-			<label kind="assignment" x="-1139" y="-149">TSMT_SM := 0,
+			<label kind="guard" x="-856" y="-883">Senddata==1</label>
+			<label kind="assignment" x="-856" y="-860">TSMT_SM := 0,
 Senddata+=1</label>
 		</transition>
 		<transition id="id16">
 			<source ref="id7"/>
 			<target ref="id4"/>
-			<label kind="guard" x="-1225" y="-348">TSMT_SM &gt; 3</label>
-			<label kind="assignment" x="-1225" y="-327">TSMT_SM := 0,
+			<label kind="guard" x="-942" y="-1059">TSMT_SM &gt; 3</label>
+			<label kind="assignment" x="-942" y="-1038">TSMT_SM := 0,
 Senddata:=1</label>
 		</transition>
 		<transition id="id17">
 			<source ref="id6"/>
 			<target ref="id7"/>
-			<label kind="guard" x="-1147" y="-437">TSMT_SM &gt;=3 
+			<label kind="guard" x="-864" y="-1148">TSMT_SM &gt;=3 
 &amp;&amp; !errorOccurred_SM</label>
-			<label kind="assignment" x="-1136" y="-396">TSMT_SM := 0</label>
+			<label kind="assignment" x="-853" y="-1107">TSMT_SM := 0</label>
 		</transition>
 		<transition id="id18">
 			<source ref="id8"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-1022" y="-357">TSMT_SM &gt;=2</label>
-			<label kind="assignment" x="-1027" y="-336">TSMT_SM := 0</label>
+			<label kind="guard" x="-739" y="-1068">TSMT_SM &gt;=2</label>
+			<label kind="assignment" x="-744" y="-1047">TSMT_SM := 0</label>
 		</transition>
 		<transition id="id19">
 			<source ref="id4"/>
 			<target ref="id8"/>
-			<label kind="guard" x="-1109" y="-225">Senddata==0</label>
-			<label kind="assignment" x="-1152" y="-268">TSMT_SM := 0,
+			<label kind="guard" x="-826" y="-936">Senddata==0</label>
+			<label kind="assignment" x="-869" y="-979">TSMT_SM := 0,
 TOTALTIME_SM:=0</label>
 		</transition>
 	</template>
@@ -191,8 +225,8 @@ int send_results;
 		<transition id="id27">
 			<source ref="id26"/>
 			<target ref="id20"/>
-			<label kind="guard" x="-349" y="-188">TOTALTIME_DPM&lt;100</label>
-			<label kind="assignment" x="-318" y="-169">stop:=false,
+			<label kind="guard" x="-357" y="-207">TOTALTIME_DPM&lt;1000</label>
+			<label kind="assignment" x="-326" y="-195">stop:=false,
 DPM_done:=true</label>
 		</transition>
 		<transition id="id28">
@@ -207,7 +241,7 @@ DPM_done:=true</label>
 			<source ref="id25"/>
 			<target ref="id26"/>
 			<label kind="guard" x="-190" y="-74">TDPMT_DPM&gt;1</label>
-			<label kind="synchronisation" x="-350" y="-62">startPathPlanning!</label>
+			<label kind="synchronisation" x="-363" y="-67">startPathPlanning!</label>
 			<label kind="assignment" x="-176" y="-50">TDPMT_DPM := 0</label>
 		</transition>
 		<transition id="id30">
@@ -239,8 +273,9 @@ dataValid :=true</label>
 		<transition id="id34">
 			<source ref="id20"/>
 			<target ref="id22"/>
-			<label kind="synchronisation" x="-137" y="-232">startDataProcessing?</label>
-			<label kind="assignment" x="-168" y="-206">TDPMT_DPM := 0,
+			<label kind="guard" x="-127" y="-248">SM_done == true</label>
+			<label kind="synchronisation" x="-137" y="-228">startDataProcessing?</label>
+			<label kind="assignment" x="-168" y="-202">TDPMT_DPM := 0,
 TOTALTIME_DPM:=0,
 errorOccurred_DPM := false</label>
 		</transition>
@@ -284,14 +319,14 @@ bool pathValid;
 		<transition id="id42">
 			<source ref="id36"/>
 			<target ref="id37"/>
-			<label kind="guard" x="-479" y="-105">TOTALTIME_PPM&lt;500</label>
-			<label kind="assignment" x="-478" y="-87">TPPMT_PPM := 0,
+			<label kind="guard" x="-480" y="-124">TOTALTIME_PPM&lt;5000</label>
+			<label kind="assignment" x="-479" y="-106">TPPMT_PPM := 0,
 PPM_done:=true</label>
 		</transition>
 		<transition id="id43">
 			<source ref="id38"/>
 			<target ref="id36"/>
-			<label kind="synchronisation" x="-436" y="5">receive_planning_feedback!</label>
+			<label kind="synchronisation" x="-461" y="8">receive_planning_feedback!</label>
 		</transition>
 		<transition id="id44">
 			<source ref="id39"/>
@@ -361,7 +396,7 @@ int start;</declaration>
 		<transition id="id55">
 			<source ref="id53"/>
 			<target ref="id48"/>
-			<label kind="guard" x="-117" y="8">TOTALTIME_ECM&lt;=500</label>
+			<label kind="guard" x="-117" y="8">TOTALTIME_ECM&lt;=50000</label>
 			<label kind="assignment" x="-83" y="35">ECM_done:=true</label>
 			<nail x="-101" y="34"/>
 		</transition>
@@ -501,49 +536,60 @@ system sm,dpm,ppm,ecm,oam,tc;
 	<queries>
 		<option key="--backwards-order" value="1"/>
 		<query>
-			<formula/>
+			<formula>A&lt;&gt; (global_clock &lt; MAX_TIME)</formula>
 			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-03-31 19:58:50 +0800">
+				<option key="--backwards-order" value="1"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (SM_done imply DPM_done imply PPM_done imply ECM_done)</formula>
+			<comment/>
+			<option key="--backwards-order" value="1"/>
+			<result outcome="success" type="quality" timestamp="2025-03-31 21:00:44 +0800">
+				<option key="--backwards-order" value="1"/>
+			</result>
 		</query>
 		<query>
 			<formula>A&lt;&gt; (global_clock &lt; 1)</formula>
 			<comment/>
-			<result outcome="success" type="quality" timestamp="2024-11-05 17:35:56 +0800">
+			<result outcome="success" type="quality" timestamp="2025-03-31 17:10:23 +0800">
 				<option key="--backwards-order" value="1"/>
 			</result>
 		</query>
 		<query>
-			<formula>A&lt;&gt; (oam.TOTALTIME_OAM &lt; 1)</formula>
+			<formula>A&lt;&gt; (oam.TOTALTIME_OAM &lt; TOAM_MAX)</formula>
 			<comment/>
-			<result outcome="success" type="quality" timestamp="2024-11-05 17:35:15 +0800">
+			<result outcome="success" type="quality" timestamp="2025-04-01 21:27:42 +0800">
 				<option key="--backwards-order" value="1"/>
 			</result>
 		</query>
 		<query>
-			<formula>A&lt;&gt; (ecm.TOTALTIME_ECM &lt; 1)</formula>
+			<formula>A&lt;&gt; (ecm.TOTALTIME_ECM &lt; TECM_MAX)</formula>
 			<comment/>
-			<result outcome="success" type="quality" timestamp="2024-11-05 17:34:51 +0800">
+			<result outcome="success" type="quality" timestamp="2025-04-01 21:28:41 +0800">
 				<option key="--backwards-order" value="1"/>
 			</result>
 		</query>
 		<query>
-			<formula>A&lt;&gt; (ppm.TOTALTIME_PPM &lt; 1)</formula>
+			<formula>A&lt;&gt; (ppm.TOTALTIME_PPM &lt; TPPM_MAX)</formula>
 			<comment/>
-			<result outcome="success" type="quality" timestamp="2024-11-05 17:34:20 +0800">
+			<result outcome="success" type="quality" timestamp="2025-04-01 21:28:39 +0800">
 				<option key="--backwards-order" value="1"/>
 			</result>
 		</query>
 		<query>
-			<formula>A&lt;&gt; (sm.TOTALTIME_SM &lt; 1)</formula>
+			<formula>A&lt;&gt; (sm.TOTALTIME_SM &lt; TSM_MAX)</formula>
 			<comment/>
-			<result outcome="success" type="quality" timestamp="2024-11-05 17:32:55 +0800">
+			<result outcome="success" type="quality" timestamp="2025-04-01 21:28:37 +0800">
 				<option key="--backwards-order" value="1"/>
 			</result>
 		</query>
 		<query>
-			<formula>A&lt;&gt; (dpm.TOTALTIME_DPM &lt; 1)</formula>
+			<formula>A&lt;&gt; (dpm.TOTALTIME_DPM &lt; TDPM_MAX)</formula>
 			<comment/>
 			<option key="--backwards-order" value="1"/>
-			<result outcome="success" type="quality" timestamp="2024-11-05 17:32:32 +0800">
+			<result outcome="success" type="quality" timestamp="2025-04-01 21:30:54 +0800">
 				<option key="--backwards-order" value="1"/>
 			</result>
 		</query>

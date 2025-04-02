@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nta>
+  <declaration>
+    // Declare global variables and clock
+    int N = 10; // Size of the state space
+    int labels[10]; // Array to store the labels of the states
+    clock t; // Global clock
+  </declaration>
+
+  <template>
+    <name>Atomic Proposition</name>
+    <declaration>
+      // Declare atomic proposition state
+      int state;
+    </declaration>
+    <location id="q0" x="100" y="100">
+      <label x="100" y="90">Idle</label>
+    </location>
+    <init ref="q0"/>
+    <transition>
+      <source ref="q0"/>
+      <target ref="q0"/>
+      <label kind="guard" x="150" y="110">state == 1</label> <!-- Guard condition for transition -->
+      <label kind="assignment" x="150" y="120">state = 0</label> <!-- Assignment for state change -->
+    </transition>
+  </template>
+
+  <template>
+    <name>EX</name>
+    <declaration>
+      // Declare an array to store the labels for EX (existential next)
+      int labels1[10];
+    </declaration>
+    <location id="q0" x="200" y="100">
+      <label x="200" y="90">EX</label>
+    </location>
+    <init ref="q0"/>
+    <transition>
+      <source ref="q0"/>
+      <target ref="q0"/>
+      <label kind="guard" x="250" y="110">labels1[0] == 1</label> <!-- Guard condition for EX -->
+      <label kind="assignment" x="250" y="120">labels1[0] = 0</label> <!-- Update the label -->
+    </transition>
+  </template>
+
+  <template>
+    <name>E_U</name>
+    <declaration>
+      // Declare arrays to store labels for E_U (existential until)
+      int labels1[10], labels2[10];
+    </declaration>
+    <location id="q0" x="300" y="100">
+      <label x="300" y="90">E_U</label>
+    </location>
+    <init ref="q0"/>
+    <transition>
+      <source ref="q0"/>
+      <target ref="q0"/>
+      <label kind="guard" x="350" y="110">labels1[0] == 1 && labels2[0] == 1</label> <!-- Guard condition for E_U -->
+      <label kind="assignment" x="350" y="120">labels2[0] = 0</label> <!-- Update the label for E_U -->
+    </transition>
+  </template>
+
+  <system>
+    // Define the system model combining all templates
+    AtomicProposition A;
+    EX B;
+    E_U C;
+    system A, B, C; <!-- System consisting of the atomic proposition, EX, and E_U templates -->
+  </system>
+
+  <verification>
+    // Verify the CTL formula
+    check AG (labels[0] == 1);  <!-- Verify if the global condition labels[0] == 1 holds in all states -->
+  </verification>
+</nta>

@@ -4,17 +4,51 @@
 	<declaration>// Place global declarations here.
 clock global_clock;
 
+int global_clock_S; 
+int global_clock_P; 
+
+int max(int a, int b) {
+    return (a &gt;= b) ? a : b;
+}
+const int MAX_TIME = 1000;
+const int FAULT_TOLERANCE = 3;
+
 bool SM_done:=false;
 bool DPM_done:=false;
 bool PPM_done:=false;
 bool ECM_done:=false;
 bool OAM_done:=false;
 
+const int TSM_MAX = 2;
+const int TDPM_MAX = 5;
+const int TPPM_MAX = 10;
+const int TECM_MAX = 3; 
+const int TOAM_MAX = 4;
+
 chan startDataProcessing;
 chan startPathPlanning;
 
+bool Agent_Added := false;
+bool Agent_Replaced := false;
+bool Agent_Deleted := false;
+
 chan receive_planning_feedback;
-chan notify_obstacle;</declaration>
+chan notify_obstacle;
+
+bool checkExecutionOrder() {
+    return (SM_done imply DPM_done) &amp;&amp; 
+           (DPM_done imply PPM_done) &amp;&amp; 
+           (PPM_done imply ECM_done);
+}
+
+int timeValid() {
+    return max(global_clock_S, global_clock_P) &lt;= MAX_TIME;
+}
+
+
+bool checkTimeConsistency(int addtime) {
+    return MAX_TIME&gt;=max(global_clock_S,global_clock_P);
+}</declaration>
 	<template>
 		<name>TimeCheck</name>
 		<declaration>bool errorOccurred;
@@ -501,7 +535,11 @@ system sm,dpm,ppm,ecm,oam,tc;
 	<queries>
 		<option key="--backwards-order" value="1"/>
 		<query>
-			<formula/>
+			<formula>A[] (total_clock &lt;= MAX_TIME)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>A[] (SM_done imply DPM_done imply PPM_done imply ECM_done imply OAM_done)</formula>
 			<comment/>
 		</query>
 		<query>

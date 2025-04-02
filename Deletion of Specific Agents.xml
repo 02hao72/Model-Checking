@@ -59,57 +59,61 @@ clock TSMT_SM;
 clock TOTALTIME_SM;
 
 bool errorOccurred_SM;
+bool go := true;
 
 int Senddata;
 
 
 </declaration>
-		<location id="id4" x="-1320" y="-415">
-			<name x="-1338" y="-451">Idle</name>
+		<location id="id4" x="-1050" y="-294">
+			<name x="-1068" y="-330">Idle</name>
 		</location>
-		<location id="id5" x="-1318" y="-207">
-			<name x="-1347" y="-244">Checking</name>
+		<location id="id5" x="-1048" y="-86">
+			<name x="-1077" y="-123">Checking</name>
 		</location>
-		<location id="id6" x="-1013" y="-211">
-			<name x="-1052" y="-250">Collecting</name>
+		<location id="id6" x="-743" y="-90">
+			<name x="-782" y="-129">Collecting</name>
 		</location>
-		<location id="id7" x="-1013" y="-412">
-			<name x="-1060" y="-445">Transmitting</name>
+		<location id="id7" x="-743" y="-291">
+			<name x="-790" y="-324">Transmitting</name>
 		</location>
+		<init ref="id4"/>
 		<transition id="id8">
 			<source ref="id7"/>
 			<target ref="id4"/>
-			<label kind="guard" x="-1232" y="-434">TOTALTIME_SM&lt;=20</label>
-			<label kind="synchronisation" x="-1258" y="-455">startDataProcessing!</label>
-			<label kind="assignment" x="-1227" y="-411">TSMT_SM := 0</label>
+			<label kind="guard" x="-962" y="-313">TOTALTIME_SM&lt;=20</label>
+			<label kind="synchronisation" x="-988" y="-334">startDataProcessing!</label>
+			<label kind="assignment" x="-957" y="-290">TSMT_SM := 0,
+SM_done := true</label>
 		</transition>
 		<transition id="id9">
 			<source ref="id6"/>
 			<target ref="id7"/>
-			<label kind="guard" x="-1010" y="-338">TSMT_SM &gt;= 1 &amp;&amp; !errorOccurred_SM</label>
-			<label kind="assignment" x="-1003" y="-316">TSMT_SM := 0</label>
+			<label kind="guard" x="-740" y="-217">TSMT_SM &gt;= 1 &amp;&amp; !errorOccurred_SM</label>
+			<label kind="assignment" x="-733" y="-195">TSMT_SM := 0</label>
 		</transition>
 		<transition id="id10">
 			<source ref="id6"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-1075" y="-104">TSMT_SM &gt;= 2</label>
-			<label kind="assignment" x="-1127" y="-77">errorOccurred_SM := false</label>
-			<nail x="-1125" y="-82"/>
-			<nail x="-910" y="-79"/>
+			<label kind="guard" x="-805" y="17">TSMT_SM &gt;= 2</label>
+			<label kind="assignment" x="-857" y="44">errorOccurred_SM := false</label>
+			<nail x="-855" y="39"/>
+			<nail x="-640" y="42"/>
 		</transition>
 		<transition id="id11">
 			<source ref="id5"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-1240" y="-237">TSMT_SM &gt;= 2</label>
-			<label kind="assignment" x="-1237" y="-210">TSMT_SM := 0</label>
-			<nail x="-1306" y="-210"/>
+			<label kind="guard" x="-970" y="-116">TSMT_SM &gt;= 2</label>
+			<label kind="assignment" x="-967" y="-89">TSMT_SM := 0</label>
+			<nail x="-1036" y="-89"/>
 		</transition>
 		<transition id="id12">
 			<source ref="id4"/>
 			<target ref="id5"/>
-			<label kind="guard" x="-1315" y="-333">true</label>
-			<label kind="assignment" x="-1442" y="-336">TSMT_SM := 0,
-TOTALTIME_SM:=0</label>
+			<label kind="guard" x="-1045" y="-212">go</label>
+			<label kind="assignment" x="-1176" y="-218">TSMT_SM := 0,
+TOTALTIME_SM:=0,
+go:=false</label>
 		</transition>
 	</template>
 	<template>
@@ -463,7 +467,11 @@ system sm,dpm,ppm,ecm,oam,tc;
 	<queries>
 		<option key="--backwards-order" value="1"/>
 		<query>
-			<formula/>
+			<formula>A[] (SM_done imply DPM_done imply PPM_done imply ECM_done imply OAM_done)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>A[] (total_clock &lt;= MAX_TIME)</formula>
 			<comment/>
 		</query>
 		<query>

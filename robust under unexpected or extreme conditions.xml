@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+<declaration>
+// =====================
+// Global Parameters for Robustness Verification
+// =====================
+const int MAX_TIME = 25;       // Normal time constraint (ms)
+const int FAULT_TOLERANCE = 3; // Fault tolerance threshold (ms)
+
+// Fault injection control
+bool inject_clockDrift := false;  // Clock drift attack
+bool inject_moduleCrash := false; // Module crash
+bool inject_commDelay := false;   // Communication delay
+int fault_duration := 0;          // Fault duration
+
+// Fault tolerance mechanism state
+bool fallback_activated := false;
+bool recovery_in_progress := false;
+
+// =====================
+// Original global declarations (kept)
+// =====================
+clock T_global;
+clock T_SM, T_DPM, T_PPM, T_ECM, T_OAM;
+bool SM_done, DPM_done, PPM_done, ECM_done, OAM_done;
+</declaration>
+
+<!-- *************************** -->
+<!-- Fault Injection Controller Template -->
+<!-- *************************** -->
+<template>
+<name>FaultInjector</name>
+<declaration>
+// Fault probability distribution
+const double PROB_CLOCK_DRIFT = 0.1;  // 10% probability
+const double PROB_MODULE_CRASH = 0.05;
+const double PROB_COMM_DELAY = 0.15;
+</declaration>
+
+<location id="id0" x="0" y="0">
+    <name x="-10" y="-30">Idle</name>
+</location>
+
+<location id="id1" x="100" y="0">
+    <name x="90" y="-30">Injecting</name>
+    <exponentialrate x="90" y="20">1.0</exponentialrate>
+</location>
+
+<transition>
+    <source ref="id0"/>
+    <target ref="id1"/>
+    <label kind="select" x="50" y="-20">t:clock</label>
+    <label kind="guard" x="50" y="0">T_global >= 5</label> <!-- Inject faults after system stabilizes -->
+    <label kind="assignment" x="50" y="20">
+        inject_clockDrift = (random(1.0) &lt;= PROB_CLOCK_DRIFT,
+        inject_moduleCrash = (random(1.0) &lt;= PROB_MODULE_CRASH,
+        inject_commDelay = (random(1.0) &lt;= PROB_COMM_DELAY,
+        fault_duration = 5 + random(15)  // Fault duration 5-20ms
+    </label>
+</transition>
+
+<transition>
+    <source ref="id1"/>
+    <target ref="id0"/>
+    <label kind="guard" x="150" y="-10">T_global >= fault_duration</label>
+    <label kind="assignment" x="150" y="10">
+        inject_clockDrift = false,
+        inject_moduleCrash = false,
+        inject_commDelay = false
+    </label>
+</transition>
+</template>
+
+<!-- *************************** -->
+<!-- Faulty Sensor Module -->
+<!-- *************************** -->
+<template>
+<name>SensorModule_Faulty</name>
+<declaration>
+clock T_SM_local;
+bool data_corrupted := false;
+</declaration>
+
+<location id="Collecting" x="0" y="0">
+    <name x="-30" y="-30">Collecting</name>
+    <label kind="invariant">T_SM_local <= 2 + (inject_clockDrift ? 2 : 0)</label>
+</location>
+
+<location id="ErrorState" x="200" y="0">
+    <name x="190" y="-30">ErrorState</name>
+    <urgent/>
+</location>
+
+<transition>
+    <source ref="Collecting"/>
+    <target ref="ErrorState"/>
+    <label kind="guard">inject_clockDrift && T_SM_local >= 4</label>
+    <label kind="assignment">data_corrupted=true</label>
+</transition>
+
+<transition>
+    <source ref="ErrorState"/>
+    <target ref="Collecting"/>
+    <label kind="guard">fallback_activated</label>
+    <label kind="assignment">T_SM_local=0, data_corrupted=false</label>
+</transition>
+</template>
+
+<!-- *************************** -->
+<!-- Fault Tolerance Controller -->
+<!-- *************************** -->
+<template>
+<name>FaultToleranceController</name>
+<declaration>
+int error_count := 0;
+const int MAX_ERRORS = 3;
+</declaration>
+
+<location id="Normal" x="0" y="0">
+    <name x="-20" y="-30">Normal</name>
+</location>
+
+<location id="Fallback" x="150" y="0">
+    <name x="140" y="-30">Fallback</name>
+</location>
+
+<location id="Recovery" x="300" y="0">
+    <name x="290" y="-30">Recovery</name>
+</location>
+
+<transition>
+    <source ref="Normal"/>
+    <target ref="Fallback"/>
+    <label kind="guard">error_count >= MAX_ERRORS || 
+                      (inject_moduleCrash && T_global > MAX_TIME + FAULT_TOLERANCE)</label>
+    <label kind="assignment">fallback_activated=true</label>
+</transition>
+
+<transition>
+    <source ref="Fallback"/>
+    <target ref="Recovery"/>
+    <label kind="guard">T_global <= MAX_TIME + 2*FAULT_TOLERANCE</label>
+    <label kind="assignment">recovery_in_progress=true</label>
+</transition>
+
+<transition>
+    <source ref="Recovery"/>
+    <target ref="Normal"/>
+    <label kind="guard">T_global >= MAX_TIME + 3*FAULT_TOLERANCE</label>
+    <label kind="assignment">
+        error_count = 0,
+        fallback_activated = false,
+        recovery_in_progress = false
+    </label>
+</transition>
+</template>
+
+<!-- *************************** -->
+<!-- System Declaration (including fault injection components) -->
+<!-- *************************** -->
+<system>
+// Original modules (fault-injection versions)
+sm = SensorModule_Faulty();
+dpm = DataProcessingModule();
+ppm = PathPlanningModule();
+ecm = ExecutionControlModule();
+oam = ObstacleAvoidanceModule();
+tc = TimeCheck();
+
+// New fault tolerance components
+fault = FaultInjector();
+ftc = FaultToleranceController();
+
+// Communication channels
+chan sync_SM, sync_DPM, sync_PPM, sync_ECM, sync_OAM;
+
+system sm, dpm, ppm, ecm, oam, tc, fault, ftc;
+</system>
+
+<!-- *************************** -->
+<!-- Robustness Verification Queries -->
+<!-- *************************** -->
+<queries>
+<!-- Query 1: Time consistency under clock drift -->
+<query>
+    <formula>
+    A[] (inject_clockDrift imply 
+        (T_global <= MAX_TIME + FAULT_TOLERANCE || fallback_activated))
+    </formula>
+    <comment>Under clock attack, the system should either maintain the constraint or enter fallback mode</comment>
+</query>
+
+<!-- Query 2: Recovery ability after module crash -->
+<query>
+    <formula>
+    E&lt;&gt; inject_moduleCrash imply EF Recovery
+    </formula>
+    <comment>There exists a path from module crash to recovery</comment>
+</query>
+
+<!-- Query 3: Stability under multiple faults -->
+<query>
+    <formula>
+    simulate 500 [<=100] { 
+        inject_clockDrift, 
+        inject_moduleCrash, 
+        T_global, 
+        fallback_activated 
+    }
+    </formula>
+    <comment>Monte Carlo simulation for multiple fault scenarios</comment>
+</query>
+
+<!-- Query 4: Fault tolerance response time -->
+<query>
+    <formula>
+    E&lt;&gt; inject_moduleCrash and 
+        (sup: T_global) - (inf: T_global when inject_moduleCrash) <= 10
+    </formula>
+    <comment>Fault tolerance mechanism triggered within 10ms after fault occurs</comment>
+</query>
+</queries>
+</nta>
